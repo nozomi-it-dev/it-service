@@ -8,7 +8,7 @@ function Get-CPUInfo {
     $cpu = Get-CimInstance -ClassName Win32_Processor
     $cpuLoad = (Get-Counter '\Processor(_Total)\% Processor Time').CounterSamples.CookedValue
     
-    Write-Host "`n==================== CPU ====================" -ForegroundColor Cyan
+    Write-Host "`n================== CPU =================" -ForegroundColor Cyan
     Write-Host "Model: $($cpu.Name)"
     Write-Host "Base Speed: $($cpu.MaxClockSpeed) MHz"
     Write-Host "Current Speed: $([math]::Round($cpu.CurrentClockSpeed / 1000, 2)) GHz"
@@ -35,6 +35,35 @@ function Get-CPUInfo {
     Write-Host "Up time: $($uptimeSpan.Days)d $($uptimeSpan.Hours)h $($uptimeSpan.Minutes)m $($uptimeSpan.Seconds)s"
 }
 
+function Get-GPUInfo {
+    Write-Host "`n================== GPU =================" -ForegroundColor Cyan
+    
+    $gpus = Get-CimInstance -ClassName Win32_VideoController
+    
+    foreach ($gpu in $gpus) {
+        Write-Host "`n$($gpu.Name)"
+        $vram = [math]::Round($gpu.AdapterRAM / 1GB, 1)
+        if ($vram -gt 0) {
+            Write-Host "VRAM: $vram GB"
+        }
+        Write-Host "Driver Version: $($gpu.DriverVersion)"
+        Write-Host "Resolution: $($gpu.CurrentHorizontalResolution) x $($gpu.CurrentVerticalResolution)"
+        Write-Host "Refresh Rate: $($gpu.CurrentRefreshRate) Hz"
+    }
+    
+    # Try to get GPU usage (requires Windows 10/11)
+    try {
+        $gpuLoad = (Get-Counter '\GPU Engine(*)\Utilization Percentage' -ErrorAction SilentlyContinue).CounterSamples | 
+        Measure-Object -Property CookedValue -Sum
+        if ($gpuLoad.Sum -gt 0) {
+            Write-Host "Utilization: $([math]::Round($gpuLoad.Sum, 1))%" -ForegroundColor Yellow
+        }
+    }
+    catch {
+        # GPU counters not available on this system
+    }
+}
+
 function Get-MemoryInfo {
     $os = Get-CimInstance -ClassName Win32_OperatingSystem
     $totalMemory = [math]::Round($os.TotalVisibleMemorySize / 1MB, 1)
@@ -42,7 +71,7 @@ function Get-MemoryInfo {
     $usedMemory = $totalMemory - $freeMemory
     $memoryUsage = [math]::Round(($usedMemory / $totalMemory) * 100, 0)
     
-    Write-Host "`n================== Memory ==================" -ForegroundColor Cyan
+    Write-Host "`n================ Memory ================" -ForegroundColor Cyan
     Write-Host "Total: $totalMemory GB"
     Write-Host "Used: $usedMemory GB ($memoryUsage%)" -ForegroundColor Yellow
     Write-Host "Available: $freeMemory GB"
@@ -56,7 +85,7 @@ function Get-MemoryInfo {
 function Get-DiskInfo {
     $disks = Get-CimInstance -ClassName Win32_DiskDrive
     
-    Write-Host "`n=================== Disks ===================" -ForegroundColor Cyan
+    Write-Host "`n================= Disks ================" -ForegroundColor Cyan
     
     foreach ($disk in $disks) {
         $diskName = $disk.Caption
@@ -111,7 +140,7 @@ function Get-DiskInfo {
 }
 
 function Get-NetworkInfo {
-    Write-Host "`n================== Network ==================" -ForegroundColor Cyan
+    Write-Host "`n================ Network ===============" -ForegroundColor Cyan
     
     $adapters = Get-NetAdapter | Where-Object { $_.Status -eq 'Up' }
     
@@ -143,50 +172,16 @@ function Get-NetworkInfo {
     }
 }
 
-function Get-GPUInfo {
-    Write-Host "`n==================== GPU ====================" -ForegroundColor Cyan
-    
-    $gpus = Get-CimInstance -ClassName Win32_VideoController
-    
-    foreach ($gpu in $gpus) {
-        Write-Host "`n$($gpu.Name)"
-        $vram = [math]::Round($gpu.AdapterRAM / 1GB, 1)
-        if ($vram -gt 0) {
-            Write-Host "VRAM: $vram GB"
-        }
-        Write-Host "Driver Version: $($gpu.DriverVersion)"
-        Write-Host "Resolution: $($gpu.CurrentHorizontalResolution) x $($gpu.CurrentVerticalResolution)"
-        Write-Host "Refresh Rate: $($gpu.CurrentRefreshRate) Hz"
-    }
-    
-    # Try to get GPU usage (requires Windows 10/11)
-    try {
-        $gpuLoad = (Get-Counter '\GPU Engine(*)\Utilization Percentage' -ErrorAction SilentlyContinue).CounterSamples | 
-        Measure-Object -Property CookedValue -Sum
-        if ($gpuLoad.Sum -gt 0) {
-            Write-Host "Utilization: $([math]::Round($gpuLoad.Sum, 1))%" -ForegroundColor Yellow
-        }
-    }
-    catch {
-        # GPU counters not available on this system
-    }
-}
-
 # Main execution
 Clear-Host
-Write-Host "=============================================" -ForegroundColor Green
-Write-Host "     SYSTEM PERFORMANCE MONITOR" -ForegroundColor Green
-Write-Host "=============================================" -ForegroundColor Green
-Write-Host "Gathering system information..." -ForegroundColor Gray
+Write-Host "========================================" -ForegroundColor Green
+Write-Host "       SYSTEM PERFORMANCE MONITOR       " -ForegroundColor Green
+Write-Host "========================================" -ForegroundColor Green
 
 Get-CPUInfo
+Get-GPUInfo
 Get-MemoryInfo
 Get-DiskInfo
-Get-GPUInfo
 Get-NetworkInfo
 
-Write-Host "`n=============================================" -ForegroundColor Green
-Write-Host "Monitoring complete!" -ForegroundColor Green
-Write-Host "=============================================" -ForegroundColor Green
-Write-Host "`nPress any key to exit..."
-$null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
+Write-Host ""

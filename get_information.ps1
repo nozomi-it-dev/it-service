@@ -28,10 +28,10 @@ $fullpath = Join-Path $output_path $filename
 
 # Initialize report file
 @"
-====================================================
---- IT DEVICE INVENTORY DATA ---
-Date/Time: $date_str  $time_str
-====================================================
+========================================
+        IT DEVICE INVENTORY DATA
+   Date/Time: $date_str  $time_str
+========================================
 
 "@ | Out-File -FilePath $fullpath -Encoding UTF8
 
@@ -108,9 +108,9 @@ foreach ($disk in $disks) {
 "" | Out-File -FilePath $fullpath -Append -Encoding UTF8
 
 # Additional Information Section
-"====================================================
---- ADDITIONAL INFORMATION ---
-====================================================
+"========================================
+         ADDITIONAL INFORMATION
+========================================
 " | Out-File -FilePath $fullpath -Append -Encoding UTF8
 
 # Device ID
@@ -118,7 +118,7 @@ foreach ($disk in $disks) {
 
 # Product ID
 $productId = (Get-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion" -Name ProductId -ErrorAction SilentlyContinue).ProductId
-"Windows Product ID: $productId" | Out-File -FilePath $fullpath -Append -Encoding UTF8
+"Product ID: $productId" | Out-File -FilePath $fullpath -Append -Encoding UTF8
 "" | Out-File -FilePath $fullpath -Append -Encoding UTF8
 
 # Microsoft Office Information
@@ -162,12 +162,4 @@ else {
     "Microsoft Office: Not installed or not detected" | Out-File -FilePath $fullpath -Append -Encoding UTF8
 }
 
-# Display success message
-Write-Host ""
-Write-Host "===================================================="
-Write-Host "SUCCESS! Report saved to:"
 Write-Host $fullpath
-Write-Host "===================================================="
-Write-Host ""
-Write-Host "Press any key to close this window..."
-$null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
