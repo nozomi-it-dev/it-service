@@ -1,5 +1,4 @@
-# Asset Inventory Report - PowerShell Version
-# For modern Windows systems without WMIC
+# Generates an asset inventory report and saves to IT-USB or Desktop
 
 $Host.UI.RawUI.WindowTitle = "Asset Inventory Report"
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8

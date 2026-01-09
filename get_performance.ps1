@@ -1,5 +1,4 @@
-# System Performance Monitor
-# Similar to Windows Task Manager Performance Tab
+# Displays system performance metrics (CPU, GPU, Memory, Disks, Network)
 
 $Host.UI.RawUI.WindowTitle = "System Performance Monitor"
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
