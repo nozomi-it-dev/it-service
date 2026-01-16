@@ -59,12 +59,45 @@ $category = if ($isLaptop) { "Laptop" } else { "Desktop" }
 "[4] Serial Number: $($bios.SerialNumber)" | Out-File -FilePath $fullpath -Append -Encoding UTF8
 "" | Out-File -FilePath $fullpath -Append -Encoding UTF8
 
-# [5] Device Name
-"[5] Device Name: $env:COMPUTERNAME" | Out-File -FilePath $fullpath -Append -Encoding UTF8
+# [5] MAC Address - Physical Adapters Only
+$macAddresses = Get-NetAdapter | Where-Object { $_.Status -eq "Up" -and $_.Virtual -eq $false } | Select-Object -ExpandProperty MacAddress
+if ($macAddresses) {
+    if ($macAddresses -is [array]) {
+        foreach ($mac in $macAddresses) {
+            "[5] MAC Address: $mac" | Out-File -FilePath $fullpath -Append -Encoding UTF8
+        }
+    } else {
+        "[5] MAC Address: $macAddresses" | Out-File -FilePath $fullpath -Append -Encoding UTF8
+    }
+} else {
+    "[5] MAC Address: Not available" | Out-File -FilePath $fullpath -Append -Encoding UTF8
+}
 "" | Out-File -FilePath $fullpath -Append -Encoding UTF8
 
-# [6] Key Specs
-"[7] Key Specs:" | Out-File -FilePath $fullpath -Append -Encoding UTF8
+# [6] IP Address - Physical Adapters Only
+$physicalAdapters = Get-NetAdapter | Where-Object { $_.Status -eq "Up" -and $_.Virtual -eq $false }
+$ipAddresses = @()
+foreach ($adapter in $physicalAdapters) {
+    $ips = Get-NetIPAddress -InterfaceIndex $adapter.InterfaceIndex -AddressFamily IPv4 -ErrorAction SilentlyContinue | Where-Object { $_.AddressState -eq "Preferred" }
+    foreach ($ip in $ips) {
+        $ipAddresses += $ip.IPAddress
+    }
+}
+if ($ipAddresses) {
+    foreach ($ip in $ipAddresses) {
+        "[6] IP Address: $ip" | Out-File -FilePath $fullpath -Append -Encoding UTF8
+    }
+} else {
+    "[6] IP Address: Not available" | Out-File -FilePath $fullpath -Append -Encoding UTF8
+}
+"" | Out-File -FilePath $fullpath -Append -Encoding UTF8
+
+# [7] Device Name
+"[7] Device Name: $env:COMPUTERNAME" | Out-File -FilePath $fullpath -Append -Encoding UTF8
+"" | Out-File -FilePath $fullpath -Append -Encoding UTF8
+
+# [8] Key Specs
+"[8] Key Specs:" | Out-File -FilePath $fullpath -Append -Encoding UTF8
 
 # OS Version - Simplified (Windows 10/11 + Home/Pro)
 $osCaption = $os.Caption
@@ -119,46 +152,5 @@ foreach ($disk in $disks) {
 $productId = (Get-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion" -Name ProductId -ErrorAction SilentlyContinue).ProductId
 "Product ID: $productId" | Out-File -FilePath $fullpath -Append -Encoding UTF8
 "" | Out-File -FilePath $fullpath -Append -Encoding UTF8
-
-# Microsoft Office Information
-$office_found = $false
-$officeVersion = ""
-
-# Check Office from Registry (Office 2016, 2019, 2021, 365)
-$officeVersions = @("16.0", "15.0", "14.0")
-foreach ($ver in $officeVersions) {
-    $regPath = "HKLM:\SOFTWARE\Microsoft\Office\$ver\Registration"
-    if (Test-Path $regPath) {
-        $subKeys = Get-ChildItem -Path $regPath -ErrorAction SilentlyContinue
-        foreach ($key in $subKeys) {
-            $productName = (Get-ItemProperty -Path $key.PSPath -Name ProductName -ErrorAction SilentlyContinue).ProductName
-            if ($productName) {
-                $officeVersion = $productName
-                $office_found = $true
-                break
-            }
-        }
-        if ($office_found) { break }
-    }
-}
-
-# Check Click-to-Run (Office 365)
-if (-not $office_found) {
-    $c2rPath = "HKLM:\SOFTWARE\Microsoft\Office\ClickToRun\Configuration"
-    if (Test-Path $c2rPath) {
-        $edition = (Get-ItemProperty -Path $c2rPath -Name ProductReleaseIds -ErrorAction SilentlyContinue).ProductReleaseIds
-        if ($edition) {
-            $officeVersion = $edition
-            $office_found = $true
-        }
-    }
-}
-
-if ($office_found) {
-    "Microsoft Office: $officeVersion" | Out-File -FilePath $fullpath -Append -Encoding UTF8
-}
-else {
-    "Microsoft Office: Not installed or not detected" | Out-File -FilePath $fullpath -Append -Encoding UTF8
-}
 
 Write-Host $fullpath
